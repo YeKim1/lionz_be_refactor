@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: lionz-study
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/lionz_db
+    username: root
+    password: 1234
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+
+jwt:
+  # Base64-encoded secret key for HS512 (minimum 512 bits / 64 bytes)
+  secret: {JWT_SECRET:c29tZS1zZWN1cmUtand0LXNlY3JldC1rZXktZm9yLWxpb256LXN0dWR5LXByb2plY3QtYXQtbGVhc3QtNTEyLWJpdHMtbG9uZy1rZXk=}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
