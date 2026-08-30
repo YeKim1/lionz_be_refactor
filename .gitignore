@@ -37,4 +37,5 @@ out/
 .vscode/
 
 ### 추가 ###
-*.yml
+#*.yml
+/docs
