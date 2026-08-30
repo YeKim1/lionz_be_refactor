@@ -60,7 +60,8 @@ public class SecurityConfig {
                 // 로그인, 회원가입 API 는 토큰이 없는 상태에서 요청이 들어오기 때문에 permitAll 설정
                 .and()
                 .authorizeRequests()
-                .requestMatchers("/auth/**","/swagger-ui/**","/v3/api-docs/**", "/member/img/**","/actuator/**").permitAll()
+                .requestMatchers("/**").permitAll() // 테스트 과정에서 임시로 전체 API 허용
+                //.requestMatchers("/auth/**","/swagger-ui/**","/v3/api-docs/**", "/member/img/**","/actuator/**").permitAll()
                 .anyRequest().authenticated()   // 나머지 API 는 전부 인증 필요
 
 
