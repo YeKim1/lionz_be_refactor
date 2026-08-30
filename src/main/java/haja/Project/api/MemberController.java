@@ -138,7 +138,7 @@ public class MemberController {
         Member member = memberService.findById(SecurityUtil.getCurrentMemberId()).get();
 
         // 기본 이미지 삭제 불가
-        if (member.getImage().img_name == "DefaultProfile.png") {
+        if (member.getImage().img_name.equals("DefaultProfile.png")) {
             return;
         }
 
