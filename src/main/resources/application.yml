@@ -1,6 +1,6 @@
 spring:
   application:
-    name: lionz-study
+    name: lionz-be
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -19,7 +19,7 @@ spring:
 
 jwt:
   # Base64-encoded secret key for HS512 (minimum 512 bits / 64 bytes)
-  secret: {JWT_SECRET:c29tZS1zZWN1cmUtand0LXNlY3JldC1rZXktZm9yLWxpb256LXN0dWR5LXByb2plY3QtYXQtbGVhc3QtNTEyLWJpdHMtbG9uZy1rZXk=}
+  secret: ${JWT_SECRET:c29tZS1zZWN1cmUtand0LXNlY3JldC1rZXktZm9yLWxpb256LXN0dWR5LXByb2plY3QtYXQtbGVhc3QtNTEyLWJpdHMtbG9uZy1rZXk=}
 
 springdoc:
   swagger-ui:
