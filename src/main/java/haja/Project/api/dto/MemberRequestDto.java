@@ -3,7 +3,10 @@ package haja.Project.api.dto;
 import haja.Project.domain.Authority;
 import haja.Project.domain.Image;
 import haja.Project.domain.Member;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -29,5 +32,15 @@ public class MemberRequestDto {
 
     public UsernamePasswordAuthenticationToken toAuthentication() {
         return new UsernamePasswordAuthenticationToken(email, password);
+    }
+
+    @Data
+    public static class UpdateComment {
+        public String comment;
+    }
+
+    @Data
+    public static class UpdatePassword {
+        String password;
     }
 }

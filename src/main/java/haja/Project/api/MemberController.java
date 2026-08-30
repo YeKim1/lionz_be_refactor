@@ -1,23 +1,21 @@
 package haja.Project.api;
 
-import com.sun.net.httpserver.Authenticator;
+import haja.Project.api.dto.ApiResponse;
 import haja.Project.api.dto.MemberRequestDto;
-import haja.Project.api.dto.MemberResponseDto;
-import haja.Project.domain.*;
+import haja.Project.api.dto.MemberResponseDto.MemberInfo;
+import haja.Project.domain.Image;
+import haja.Project.domain.Member;
 import haja.Project.service.MemberService;
-import haja.Project.service.TasknoticeService;
 import haja.Project.util.SecurityUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Null;
-import lombok.AllArgsConstructor;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
-import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.imgscalr.Scalr;
-import org.springframework.http.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,12 +28,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.time.Period;
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 // 사진을 100kb로 줄이자
@@ -50,19 +44,19 @@ public class MemberController {
 
     @Operation(summary = "멤버 코멘트 수정")
     @PutMapping("comment")
-    public MemberDto updateMemberComment(@RequestBody @Valid MemberUpdateCommentRequest request) {
+    public ApiResponse<MemberInfo> updateMemberComment(@RequestBody @Valid MemberRequestDto.UpdateComment request) {
         Member member = memberService.findById(SecurityUtil.getCurrentMemberId()).get();
         memberService.updateComment(SecurityUtil.getCurrentMemberId(), request.getComment());
-        return new MemberDto(member);
+        return ApiResponse.from(MemberInfo.from(member));
     }
     @Operation(summary = "멤버 비밀번호 수정")
     @PutMapping("password")
-    public MemberDto updateMemberPassword(@RequestBody @Valid MemberUpdatePasswordRequest request) {
+    public ApiResponse<MemberInfo> updateMemberPassword(@RequestBody @Valid MemberRequestDto.UpdatePassword request) {
         if(request.getPassword() != null) {
             Member member = memberService.findById(SecurityUtil.getCurrentMemberId()).get();
             memberService.updatePassword(SecurityUtil.getCurrentMemberId(),
                     passwordEncoder.encode(request.getPassword()));
-            return new MemberDto(member);
+            return ApiResponse.from(MemberInfo.from(member));
         }
         else
             return null;
@@ -102,27 +96,27 @@ public class MemberController {
 
     @Operation(summary = "로그인 중인 멤버 조회")
     @GetMapping
-    public MemberDto MemberInfo() {
+    public ApiResponse<MemberInfo> MemberInfo() {
         Member member = memberService.findById(SecurityUtil.getCurrentMemberId()).get();
-        return new MemberDto(member);
+        return ApiResponse.from(MemberInfo.from(member));
     }
 
 
 
     @Operation(summary = "id로 멤버 조회")
     @GetMapping("/{id}")
-    public MemberDto findMemberInfoById(@PathVariable("id") Long id) {
-            return new MemberDto(memberService.findById(id).get());
+    public ApiResponse<MemberInfo> findMemberInfoById(@PathVariable("id") Long id) {
+            return ApiResponse.from(MemberInfo.from(memberService.findById(id).get()));
     }
 
     @Operation(summary = "전체 멤버 조회")
     @GetMapping("/all")
-    public Result findAllMember() {
+    public ApiResponse<List<MemberInfo>> findAllMember() {
         List<Member> members = memberService.findAll();
-        List<MemberDto> memberResult = members.stream()
-                .map(member -> new MemberDto(member))
+        List<MemberInfo> memberResult = members.stream()
+                .map(MemberInfo::from)
                 .collect(Collectors.toList());
-        return new Result(memberResult);
+        return ApiResponse.from(memberResult);
     }
 
         @Operation(summary = "멤버 id로 프로필 조회")
@@ -137,7 +131,7 @@ public class MemberController {
         header.add("Content-Type", Files.probeContentType(Paths.get(path + name)));
         return new ResponseEntity<byte[]>(bytes, header, HttpStatus.OK);
     }
-//에휴ㅅㅂ
+
     @Operation(summary = "현재 로그인한 멤버의 프로필 삭제")
     @DeleteMapping(value = "/img")
     public void deleteImage() {
@@ -156,52 +150,5 @@ public class MemberController {
 
 
 
-    }
-
-    @Data
-    @AllArgsConstructor
-    static class Result<T> {
-        private T data;
-    }
-
-
-    @Data
-    static class MemberUpdateCommentRequest {
-        String comment;
-    }
-    @Data
-    static class MemberUpdatePasswordRequest {
-        String password;
-    }
-
-    @Data
-    static class MemberDto {
-        Long id;
-        String email;
-        Authority authority;
-        String phone_num;
-        Part part;
-        String name;
-        String comment;
-        String major;
-        String student_id;
-        Image image;
-        Long accessTokenExpiresIn;
-
-        public MemberDto(Member member) {
-            this.id = member.getId();
-            this.email = member.getEmail();
-            this.authority = member.getAuthority();
-            this.phone_num = member.getPhone_num();
-            this.part = member.getPart();
-            this.name = member.getName();
-            this.comment = member.getComment();
-            this.major = member.getMajor();
-            this.student_id = member.getStudent_id();
-            this.image = member.getImage();
-            if (member.getAccessTokenExpiresIn()!=null) {
-                this.accessTokenExpiresIn = Duration.between(LocalDateTime.now(), member.getAccessTokenExpiresIn()).toMinutes();
-            } else this.accessTokenExpiresIn = null;
-        }
     }
 }
