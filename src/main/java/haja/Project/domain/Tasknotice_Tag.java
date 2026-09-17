@@ -1,13 +1,14 @@
 package haja.Project.domain;
 
 import jakarta.persistence.*;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.util.List;
 
 @Entity
 @Getter @Setter
+@NoArgsConstructor
 public class Tasknotice_Tag {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,4 +22,10 @@ public class Tasknotice_Tag {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tag_id")
     private Tag tag;
+
+    @Builder
+    public Tasknotice_Tag(Tasknotice tasknotice, Tag tag) {
+        this.tasknotice = tasknotice;
+        this.tag = tag;
+    }
 }

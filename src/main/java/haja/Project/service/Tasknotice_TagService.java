@@ -1,5 +1,6 @@
 package haja.Project.service;
 
+import haja.Project.domain.Tasknotice;
 import haja.Project.domain.Tasknotice_Tag;
 import haja.Project.repository.Tasknotice_TagRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import java.util.List;
 public class Tasknotice_TagService {
 
     private final Tasknotice_TagRepository tasknoticeTagRepository;
+    private final TagService tagService;
 
     @Transactional
     public Long save(Tasknotice_Tag tasknotice_tag){
@@ -40,6 +42,20 @@ public class Tasknotice_TagService {
     @Transactional
     public void deleteByTasknoticeId(Long id) {
         tasknoticeTagRepository.deleteByTasknoticeId(id);
+    }
+
+    @Transactional
+    public void attachTags(Tasknotice tasknotice, List<String> names) {
+        if (names.isEmpty()) return;
+        names.forEach(name -> attachTag(tasknotice, name));
+    }
+
+    private void attachTag(Tasknotice tasknotice, String name) {
+        Tasknotice_Tag tasknoticeTag = Tasknotice_Tag.builder()
+                .tasknotice(tasknotice)
+                .tag(tagService.findOrCreate(name))
+                .build();
+        tasknoticeTagRepository.save(tasknoticeTag);
     }
 
 }
