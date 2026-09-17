@@ -11,7 +11,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.imgscalr.Scalr;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -20,15 +19,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -45,52 +41,22 @@ public class MemberController {
     @Operation(summary = "멤버 코멘트 수정")
     @PutMapping("comment")
     public ApiResponse<MemberInfo> updateMemberComment(@RequestBody @Valid MemberRequestDto.UpdateComment request) {
-        Member member = memberService.findById(SecurityUtil.getCurrentMemberId()).get();
-        memberService.updateComment(SecurityUtil.getCurrentMemberId(), request.getComment());
-        return ApiResponse.from(MemberInfo.from(member));
+        MemberInfo response = memberService.updateComment(SecurityUtil.getCurrentMemberId(), request.getComment());
+        return ApiResponse.from(response);
     }
     @Operation(summary = "멤버 비밀번호 수정")
     @PutMapping("password")
     public ApiResponse<MemberInfo> updateMemberPassword(@RequestBody @Valid MemberRequestDto.UpdatePassword request) {
-        if(request.getPassword() != null) {
-            Member member = memberService.findById(SecurityUtil.getCurrentMemberId()).get();
-            memberService.updatePassword(SecurityUtil.getCurrentMemberId(),
-                    passwordEncoder.encode(request.getPassword()));
-            return ApiResponse.from(MemberInfo.from(member));
-        }
-        else
-            return null;
+        MemberInfo response = memberService.updatePassword(SecurityUtil.getCurrentMemberId(), request.getPassword());
+        return ApiResponse.from(response);
     }
 
 
     @Operation(summary = "멤버 프로필 업로드")
     @PostMapping(value = "/img", consumes =  MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> updateMemberImage(@RequestBody @Valid MultipartFile file) throws IOException {
-        Member member = memberService.findById(SecurityUtil.getCurrentMemberId()).get();
-        Date date = new Date();
-
-        if (file.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-        }
-
-        String file_name = date.getTime() + file.getOriginalFilename();
-        //String img_path = "C:\\Users\\kjk87\\Desktop\\img\\" + file_name;
-        String img_path = "/home/img/" + file_name;
-        //String img_link = "http://localhost:8080/member/img/" + file_name;
-        String img_link = "https://lionz.kro.kr/member/img/" + file_name;
-        File dest = new File(img_path);
-
-        // 이미지 용량 제한
-        String format = file_name.substring(file_name.lastIndexOf(".") + 1);
-        BufferedImage bufferedImage = Scalr.resize(ImageIO.read(file.getInputStream()), 1000, 1000, Scalr.OP_ANTIALIAS);
-        ImageIO.write(bufferedImage, format, dest);
-
-        Image image = new Image(img_link, file_name, img_path);
-        memberService.setImage(member, image);
-
-
+        memberService.setImage(SecurityUtil.getCurrentMemberId(), file);
         return new ResponseEntity<>(HttpStatus.OK);
-
     }
 
 

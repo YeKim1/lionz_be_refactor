@@ -3,6 +3,7 @@ package haja.Project.api.dto;
 import haja.Project.domain.Authority;
 import haja.Project.domain.Image;
 import haja.Project.domain.Member;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
@@ -40,6 +41,7 @@ public class MemberRequestDto {
     }
 
     @Data
+    @NotBlank
     public static class UpdatePassword {
         String password;
     }

@@ -1,15 +1,19 @@
 package haja.Project.service;
 
-import haja.Project.api.dto.MemberRequestDto;
 import haja.Project.api.dto.MemberResponseDto;
 import haja.Project.domain.Image;
 import haja.Project.domain.Member;
-import haja.Project.domain.Part;
 import haja.Project.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
+import org.imgscalr.Scalr;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
@@ -40,6 +44,7 @@ public class MemberService {
     public Optional<Member> findById(Long id) {
         return memberRepository.findById(id);
     }
+
     public Optional<Member> findByEmail(String email){ return memberRepository.findByEmail(email); }
 
     @Transactional
@@ -49,24 +54,44 @@ public class MemberService {
     }
 
     @Transactional
-    public Long updateComment(Long id, String comment) {
-        Member member = findById(id).get();
+    public MemberResponseDto.MemberInfo updateComment(Long id, String comment) {
+        Member member = memberRepository.findByIdOrElseThrow(id);
         member.setComment(comment);
-        memberRepository.save(member);
-        return member.getId();
+        return MemberResponseDto.MemberInfo.from(member);
     }
 
     @Transactional
-    public Long updatePassword(Long id, String password) {
-        Member member = findById(id).get();
+    public MemberResponseDto.MemberInfo updatePassword(Long id, String password) {
+        Member member = memberRepository.findByIdOrElseThrow(id);
         member.setPassword(password);
-        memberRepository.save(member);
-        return member.getId();
+        return MemberResponseDto.MemberInfo.from(member);
     }
     @Transactional
-    public void setImage(Member member, Image image) {
-        member.setImage(image);
-        memberRepository.save(member);
+    public void setImage(Long id, MultipartFile file) throws IOException {
+        Member member = memberRepository.findByIdOrElseThrow(id);
+        member.setImage(uploadImage(file));
+    }
+
+    private Image uploadImage(MultipartFile file) throws IOException {
+        Date date = new Date();
+
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("비어있는 파일입니다.");
+        }
+
+        String file_name = date.getTime() + file.getOriginalFilename();
+        //String img_path = "C:\\Users\\kjk87\\Desktop\\img\\" + file_name;
+        String img_path = "/home/img/" + file_name;
+        String img_link = "http://localhost:8080/member/img/" + file_name;
+        //String img_link = "https://lionz.kro.kr/member/img/" + file_name;
+        File dest = new File(img_path);
+
+        // 이미지 용량 제한
+        String format = file_name.substring(file_name.lastIndexOf(".") + 1);
+        BufferedImage bufferedImage = Scalr.resize(ImageIO.read(file.getInputStream()), 1000, 1000, Scalr.OP_ANTIALIAS);
+        ImageIO.write(bufferedImage, format, dest);
+
+        return new Image(img_link, file_name, img_path);
     }
 
     @Transactional
