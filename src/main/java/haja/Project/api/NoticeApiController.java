@@ -1,6 +1,9 @@
 package haja.Project.api;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import haja.Project.api.dto.ApiResponse;
+import haja.Project.api.dto.NoticeRequestDto;
+import haja.Project.api.dto.NoticeResponseDto;
 import haja.Project.domain.*;
 import haja.Project.service.MemberService;
 import haja.Project.service.NoticeService;
@@ -12,10 +15,9 @@ import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
-import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,46 +34,10 @@ public class NoticeApiController {
 
     @Operation(summary = "공지사항 생성", description = "공지사항 생성 페이지에서 공지 생성 완료하기 버튼")
     @PostMapping("notice")
-    public NoticeResponse createNotice(@RequestBody @Valid NoticeRequest request) {
-        if(memberService.findById(SecurityUtil.getCurrentMemberId()).get().getAuthority() == Authority.ROLE_ADMIN) {
-            Notice notice = new Notice();
-            notice.setMember(memberService.findById(SecurityUtil.getCurrentMemberId()).get());
-            notice.setTitle(request.title);
-            notice.setExplanation(request.explanation);
-            notice.setDate(LocalDateTime.now());
-            notice.setDeadline(request.deadline);
-            notice.setTarget(request.target);
-
-            Long id = noticeService.save(notice);
-
-            List<String> tags = request.tags;
-            if (tags != null) {
-                for (String tag_name : tags) {
-                    // 없는 태그면 Tag 생성하고 Notice_Tag 생성
-                    if (tagService.findByName(tag_name) == null) {
-                        Tag tag = new Tag();
-                        tag.setName(tag_name);
-                        tagService.save(tag);
-
-                        Notice_Tag notice_tag = new Notice_Tag();
-                        notice_tag.setNotice(noticeService.findById(id));
-                        notice_tag.setTag(tag);
-                        notice_tagService.save(notice_tag);
-
-                    }
-                    // 있는 태그면 Notice_Tag만 생성
-                    else {
-                        Notice_Tag notice_tag = new Notice_Tag();
-                        notice_tag.setNotice(noticeService.findById(id));
-                        notice_tag.setTag(tagService.findByName(tag_name));
-                        notice_tagService.save(notice_tag);
-                    }
-                }
-            }
-            return new NoticeResponse(id);
-        }
-        else
-            return null;
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<NoticeResponseDto.NoticeInfo> createNotice(@RequestBody @Valid NoticeRequestDto.Create request) {
+        Notice notice = noticeService.create(SecurityUtil.getCurrentMemberId(), request);
+        return ApiResponse.from(NoticeResponseDto.NoticeInfo.from(notice));
     }
 
 
@@ -113,45 +79,46 @@ public class NoticeApiController {
         return d;
     }
 
-    @Operation(summary = "공지사항 수정")
-    @PutMapping("notice/{id}")
-    public NoticeResponse updateNotice(@PathVariable("id") Long id,
-            @RequestBody @Valid NoticeRequest request) {
-        if(memberService.findById(SecurityUtil.getCurrentMemberId()).get().getAuthority() == Authority.ROLE_ADMIN) {
-            noticeService.update(id, request.title, request.explanation, request.deadline);
-            notice_tagService.deleteByNoticeId(id);
-
-            // 중복 코드 없애면 좋을텐데,, 나중에 ㄱㄱ
-            List<String> tags = request.tags;
-            if (tags != null) {
-                for (String tag_name : tags) {
-                    // 없는 태그면 Tag 생성하고 Notice_Tag 생성
-                    if (tagService.findByName(tag_name) == null) {
-                        Tag tag = new Tag();
-                        tag.setName(tag_name);
-                        tagService.save(tag);
-
-                        Notice_Tag notice_tag = new Notice_Tag();
-                        notice_tag.setNotice(noticeService.findById(id));
-                        notice_tag.setTag(tag);
-                        notice_tagService.save(notice_tag);
-
-                    }
-                    // 있는 태그면 Notice_Tag만 생성
-                    else {
-                        Notice_Tag notice_tag = new Notice_Tag();
-                        notice_tag.setNotice(noticeService.findById(id));
-                        notice_tag.setTag(tagService.findByName(tag_name));
-                        notice_tagService.save(notice_tag);
-                    }
-                }
-            }
-
-            return new NoticeResponse(id);
-        }
-        else
-            return null;
-    }
+    // 공지사항 생성 리팩토링 후 반영 예정
+//    @Operation(summary = "공지사항 수정")
+//    @PutMapping("notice/{id}")
+//    public NoticeResponse updateNotice(@PathVariable("id") Long id,
+//            @RequestBody @Valid NoticeRequest request) {
+//        if(memberService.findById(SecurityUtil.getCurrentMemberId()).get().getAuthority() == Authority.ROLE_ADMIN) {
+//            noticeService.update(id, request.title, request.explanation, request.deadline);
+//            notice_tagService.deleteByNoticeId(id);
+//
+//            // 중복 코드 없애면 좋을텐데,, 나중에 ㄱㄱ
+//            List<String> tags = request.tags;
+//            if (tags != null) {
+//                for (String tag_name : tags) {
+//                    // 없는 태그면 Tag 생성하고 Notice_Tag 생성
+//                    if (tagService.findByName(tag_name) == null) {
+//                        Tag tag = new Tag();
+//                        tag.setName(tag_name);
+//                        tagService.save(tag);
+//
+//                        Notice_Tag notice_tag = new Notice_Tag();
+//                        notice_tag.setNotice(noticeService.findById(id));
+//                        notice_tag.setTag(tag);
+//                        notice_tagService.save(notice_tag);
+//
+//                    }
+//                    // 있는 태그면 Notice_Tag만 생성
+//                    else {
+//                        Notice_Tag notice_tag = new Notice_Tag();
+//                        notice_tag.setNotice(noticeService.findById(id));
+//                        notice_tag.setTag(tagService.findByName(tag_name));
+//                        notice_tagService.save(notice_tag);
+//                    }
+//                }
+//            }
+//
+//            return new NoticeResponse(id);
+//        }
+//        else
+//            return null;
+//    }
 
     @Operation(summary = "공지사항 삭제")
     @DeleteMapping("notice/{id}")
@@ -162,16 +129,6 @@ public class NoticeApiController {
         }
     }
 
-
-    @Data
-    static class NoticeRequest {
-        String title;
-        String explanation;
-        Part target;
-        @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-        LocalDateTime deadline;
-        List<String> tags;
-    }
 
     @Data
     static class NoticeResponse {

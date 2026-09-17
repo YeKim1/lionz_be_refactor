@@ -70,7 +70,17 @@ class Notice_TagServiceTest {
 
         service.attachTags(notice, names);
 
-        verify(repository, never()).save(any());
+        verifyNoInteractions(tagService, repository);
+    }
+
+    @Test
+    @DisplayName("태그 이름 목록이 null이면 아무 작업도 하지 않는다.")
+    void 공지사항태그생성_null() {
+        Notice notice = new Notice();
+
+        service.attachTags(notice, null);
+
+        verifyNoInteractions(tagService, repository);
     }
 
     @Test

@@ -1,15 +1,17 @@
 package haja.Project.domain;
 
 import jakarta.persistence.*;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.format.annotation.DateTimeFormat;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
 @Getter @Setter
+@NoArgsConstructor
 public class Notice {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -41,5 +43,14 @@ public class Notice {
     @Column(name = "notice_like")
     private Long like; //좋아요
 
+    @Builder
+    public Notice(Member member, Part target, String title, String explanation, LocalDateTime date, LocalDateTime deadline) {
+        this.member = member;
+        this.target = target;
+        this.title = title;
+        this.explanation = explanation;
+        this.date = date;
+        this.deadline = deadline;
+    }
 
 }

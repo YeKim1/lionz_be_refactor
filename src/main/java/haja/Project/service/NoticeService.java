@@ -1,10 +1,9 @@
 package haja.Project.service;
 
+import haja.Project.api.dto.NoticeRequestDto;
 import haja.Project.domain.Notice;
-import haja.Project.domain.Tasknotice;
 import haja.Project.repository.NoticeRepository;
 import lombok.RequiredArgsConstructor;
-import org.aspectj.weaver.ast.Not;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +15,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class NoticeService {
     private final NoticeRepository noticeRepository;
+    private final MemberService memberService;
+    private final Notice_TagService notice_TagService;
 
     @Transactional
     public Long save(Notice notice) {
@@ -40,4 +41,23 @@ public class NoticeService {
 
     @Transactional
     public void delete(Long id) { noticeRepository.delete(id); }
+
+    @Transactional
+    public Notice create(Long memberId, NoticeRequestDto.Create request) {
+        Notice notice = Notice.builder()
+                .member(memberService.findById(memberId).get())
+                .title(request.getTitle())
+                .explanation(request.getExplanation())
+                .date(LocalDateTime.now())
+                .deadline(request.getDeadline())
+                .target(request.getTarget())
+                .build();
+        noticeRepository.save(notice);
+        addTags(notice, request.getTags());
+        return notice;
+    }
+
+    private void addTags(Notice notice, List<String> tags) {
+        notice_TagService.attachTags(notice, tags);
+    }
 }
