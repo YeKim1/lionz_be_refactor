@@ -34,7 +34,7 @@ public class Notice_TagService {
 
     @Transactional
     public void attachTags(Notice notice, List<String> names) {
-        if (names.isEmpty()) return;
+        if (names == null || names.isEmpty()) return;
         names.forEach(name -> attachTag(notice, name));
     }
 

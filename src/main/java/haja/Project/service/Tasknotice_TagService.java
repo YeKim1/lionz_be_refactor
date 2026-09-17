@@ -46,7 +46,7 @@ public class Tasknotice_TagService {
 
     @Transactional
     public void attachTags(Tasknotice tasknotice, List<String> names) {
-        if (names.isEmpty()) return;
+        if (names == null || names.isEmpty()) return;
         names.forEach(name -> attachTag(tasknotice, name));
     }
 
