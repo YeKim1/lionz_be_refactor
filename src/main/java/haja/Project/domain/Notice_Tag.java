@@ -1,11 +1,14 @@
 package haja.Project.domain;
 
 import jakarta.persistence.*;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
 @Getter @Setter
+@NoArgsConstructor
 public class Notice_Tag {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -19,5 +22,11 @@ public class Notice_Tag {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tag_id")
     private Tag tag;
+
+    @Builder
+    public Notice_Tag(Notice notice, Tag tag) {
+        this.notice = notice;
+        this.tag = tag;
+    }
 
 }
