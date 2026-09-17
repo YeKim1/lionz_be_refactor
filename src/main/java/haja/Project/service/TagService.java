@@ -35,4 +35,16 @@ public class TagService {
     public List<Tag> findByWord(String name){
         return tagRepository.findByWord(name);
     }
+
+    @Transactional
+    public Tag findOrCreate(String name) {
+        return tagRepository.findByName(name)
+                .orElseGet(() -> create(name));
+    }
+
+    private Tag create(String name) {
+        Tag tag = Tag.builder().name(name).build();
+        tagRepository.save(tag);
+        return tag;
+    }
 }
