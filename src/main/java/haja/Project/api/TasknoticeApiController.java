@@ -15,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.File;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,8 +37,7 @@ public class TasknoticeApiController {
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<TasknoticeResponseDto.TasknoticeInfo> createTasknotice(
             @RequestBody @Valid TasknoticeRequestDto.Create request) {
-        Tasknotice tasknotice = tasknoticeService.create(SecurityUtil.getCurrentMemberId(), request);
-        return ApiResponse.from(TasknoticeResponseDto.TasknoticeInfo.from(tasknotice));
+        return ApiResponse.from(tasknoticeService.create(SecurityUtil.getCurrentMemberId(), request));
     }
 
     //수정하기 버튼 -> 이전에 썼던 내용들 그대로 return
@@ -120,6 +118,71 @@ public class TasknoticeApiController {
             return null;
     }
 
+    @Operation(summary = "과제 공지사항 삭제")
+    @DeleteMapping("tasknotice/{id}")
+    public void deleteTasknotice(@PathVariable("id") Long id) {
+        if(memberService.findById(SecurityUtil.getCurrentMemberId()).get().getAuthority() == Authority.ROLE_ADMIN) {
+            tasknotice_tagService.deleteByTasknoticeId(id);
+            taskService.deleteByTasknotice(id);
+            tasknoticeService.delete(id);
+        }
+    }
+
+    @Operation(summary = "모든 과제 공지사항 조회")
+    @GetMapping("tasknotice")
+    public Result ReadTasknotice() {
+        Member member = memberService.findById(SecurityUtil.getCurrentMemberId()).get();
+        List<Tasknotice> tasknotices = tasknoticeService.findAll();
+        List<TasknoticeDto> collect = tasknotices.stream()
+                .map(t -> new TasknoticeDto(t))
+                .collect(Collectors.toList());
+
+        for(TasknoticeDto d: collect) {
+            // 제출 미제출
+            if (taskService.isSubmit(d.id)) d.isSubmit = true;
+            else d.isSubmit = false;
+
+            // 태그 추가
+            List<Tasknotice_Tag> tags = tasknotice_tagService.findByTasknoticeId(d.id);
+            for (Tasknotice_Tag tag: tags) {
+                d.tag.add(tag.getTag().getName());
+            }
+        }
+        return new Result(collect);
+    }
+
+    //FE파트 tasknotice조회
+    @Operation(summary = "FE 대상 과제 공지사항 조회")
+    @GetMapping("tasknotice/FE")
+    public Result ReadTasknoticeFe() {
+        List<Tasknotice> tasknotices = tasknoticeService.findFe();
+        List<TasknoticeDto> collect = tasknotices.stream()
+                .map(t -> new TasknoticeDto(t))
+                .collect(Collectors.toList());
+        return new Result(collect);
+    }
+
+    // BE파트 tasknotice조회
+    @Operation(summary = "BE 대상 과제 공지사항 조회")
+    @GetMapping("tasknotice/BE")
+    public Result ReadTasknoticeBe() {
+        List<Tasknotice> tasknotices = tasknoticeService.findBe();
+        List<TasknoticeDto> collect = tasknotices.stream()
+                .map(t -> new TasknoticeDto(t))
+                .collect(Collectors.toList());
+        return new Result(collect);
+    }
+
+    @Operation(summary = "ALL 대상 과제 공지사항 조회")
+    @GetMapping("tasknotice/ALL")
+    public Result ReadtasknoticeAll() {
+        List<Tasknotice> tasknotices = tasknoticeService.findPartAll();
+        List<TasknoticeDto> collect = tasknotices.stream()
+                .map(t -> new TasknoticeDto(t))
+                .collect(Collectors.toList());
+        return new Result(collect);
+    }
+
     @Data
     static class UpdateRequest{
         private Long id;
@@ -146,40 +209,6 @@ public class TasknoticeApiController {
         public ttDTO(Tasknotice_Tag tasknotice_tag){
             id = tasknotice_tag.getId();
         }
-    }
-
-    @Operation(summary = "과제 공지사항 삭제")
-    @DeleteMapping("tasknotice/{id}")
-    public void deleteTasknotice(@PathVariable("id") Long id) {
-        if(memberService.findById(SecurityUtil.getCurrentMemberId()).get().getAuthority() == Authority.ROLE_ADMIN) {
-            tasknotice_tagService.deleteByTasknoticeId(id);
-            taskService.deleteByTasknotice(id);
-            tasknoticeService.delete(id);
-        }
-    }
-
-
-    @Operation(summary = "모든 과제 공지사항 조회")
-    @GetMapping("tasknotice")
-    public Result ReadTasknotice() {
-        Member member = memberService.findById(SecurityUtil.getCurrentMemberId()).get();
-        List<Tasknotice> tasknotices = tasknoticeService.findAll();
-        List<TasknoticeDto> collect = tasknotices.stream()
-                .map(t -> new TasknoticeDto(t))
-                .collect(Collectors.toList());
-
-        for(TasknoticeDto d: collect) {
-            // 제출 미제출
-            if (taskService.isSubmit(d.id)) d.isSubmit = true;
-            else d.isSubmit = false;
-
-            // 태그 추가
-            List<Tasknotice_Tag> tags = tasknotice_tagService.findByTasknoticeId(d.id);
-            for (Tasknotice_Tag tag: tags) {
-                d.tag.add(tag.getTag().getName());
-            }
-        }
-        return new Result(collect);
     }
 
     @Data
@@ -221,38 +250,6 @@ public class TasknoticeApiController {
     @AllArgsConstructor
     static class Result<T> {
         private T data;
-    }
-
-    //FE파트 tasknotice조회
-    @Operation(summary = "FE 대상 과제 공지사항 조회")
-    @GetMapping("tasknotice/FE")
-    public Result ReadTasknoticeFe() {
-        List<Tasknotice> tasknotices = tasknoticeService.findFe();
-        List<TasknoticeDto> collect = tasknotices.stream()
-                .map(t -> new TasknoticeDto(t))
-                .collect(Collectors.toList());
-        return new Result(collect);
-    }
-
-    // BE파트 tasknotice조회
-    @Operation(summary = "BE 대상 과제 공지사항 조회")
-    @GetMapping("tasknotice/BE")
-    public Result ReadTasknoticeBe() {
-        List<Tasknotice> tasknotices = tasknoticeService.findBe();
-        List<TasknoticeDto> collect = tasknotices.stream()
-                .map(t -> new TasknoticeDto(t))
-                .collect(Collectors.toList());
-        return new Result(collect);
-    }
-
-    @Operation(summary = "ALL 대상 과제 공지사항 조회")
-    @GetMapping("tasknotice/ALL")
-    public Result ReadtasknoticeAll() {
-        List<Tasknotice> tasknotices = tasknoticeService.findPartAll();
-        List<TasknoticeDto> collect = tasknotices.stream()
-                .map(t -> new TasknoticeDto(t))
-                .collect(Collectors.toList());
-        return new Result(collect);
     }
 
 

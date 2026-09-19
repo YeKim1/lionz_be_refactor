@@ -1,6 +1,7 @@
 package haja.Project.service;
 
 import haja.Project.api.dto.NoticeRequestDto;
+import haja.Project.api.dto.NoticeResponseDto;
 import haja.Project.domain.Notice;
 import haja.Project.repository.NoticeRepository;
 import lombok.RequiredArgsConstructor;
@@ -43,7 +44,7 @@ public class NoticeService {
     public void delete(Long id) { noticeRepository.delete(id); }
 
     @Transactional
-    public Notice create(Long memberId, NoticeRequestDto.Create request) {
+    public NoticeResponseDto.NoticeInfo create(Long memberId, NoticeRequestDto.Create request) {
         Notice notice = Notice.builder()
                 .member(memberService.findById(memberId).get())
                 .title(request.getTitle())
@@ -54,7 +55,7 @@ public class NoticeService {
                 .build();
         noticeRepository.save(notice);
         addTags(notice, request.getTags());
-        return notice;
+        return NoticeResponseDto.NoticeInfo.from(notice);
     }
 
     private void addTags(Notice notice, List<String> tags) {

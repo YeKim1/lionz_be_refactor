@@ -36,8 +36,7 @@ public class NoticeApiController {
     @PostMapping("notice")
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<NoticeResponseDto.NoticeInfo> createNotice(@RequestBody @Valid NoticeRequestDto.Create request) {
-        Notice notice = noticeService.create(SecurityUtil.getCurrentMemberId(), request);
-        return ApiResponse.from(NoticeResponseDto.NoticeInfo.from(notice));
+        return ApiResponse.from(noticeService.create(SecurityUtil.getCurrentMemberId(), request));
     }
 
 

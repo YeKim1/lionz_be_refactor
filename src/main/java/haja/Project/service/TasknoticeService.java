@@ -1,6 +1,7 @@
 package haja.Project.service;
 
 import haja.Project.api.dto.TasknoticeRequestDto;
+import haja.Project.api.dto.TasknoticeResponseDto;
 import haja.Project.domain.Tasknotice;
 import haja.Project.repository.TasknoticeRepository;
 import lombok.RequiredArgsConstructor;
@@ -58,7 +59,7 @@ public class TasknoticeService {
 
 
     @Transactional
-    public Tasknotice create(Long memberId, TasknoticeRequestDto.Create request) {
+    public TasknoticeResponseDto.TasknoticeInfo create(Long memberId, TasknoticeRequestDto.Create request) {
         Tasknotice tasknotice = Tasknotice.builder()
                 .member(memberService.findById(memberId).get())
                 .title(request.getTitle())
@@ -70,7 +71,7 @@ public class TasknoticeService {
                 .build();
         tasknoticeRepository.save(tasknotice);
         addTags(tasknotice, request.getTags());
-        return tasknotice;
+        return TasknoticeResponseDto.TasknoticeInfo.from(tasknotice);
     }
 
     private void addTags(Tasknotice tasknotice, List<String> tags) {
