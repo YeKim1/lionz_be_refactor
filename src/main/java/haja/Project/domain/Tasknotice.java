@@ -1,6 +1,8 @@
 package haja.Project.domain;
 
 import jakarta.persistence.*;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -12,6 +14,7 @@ import java.util.List;
 
 @Entity
 @Getter @Setter
+@NoArgsConstructor
 public class Tasknotice {
 
 
@@ -49,4 +52,16 @@ public class Tasknotice {
     @OneToMany(mappedBy = "tasknotice")
     private List<Tasknotice_Tag> tasknotice_tags = new ArrayList<>();
     */
+
+    @Builder
+    public Tasknotice(Member member, Part target, String title, String explanation,
+                      LocalDateTime date, LocalDateTime deadline, String link) {
+        this.member = member;
+        this.target = target;
+        this.title = title;
+        this.explanation = explanation;
+        this.date = date;
+        this.deadline = deadline;
+        this.link = link;
+    }
 }

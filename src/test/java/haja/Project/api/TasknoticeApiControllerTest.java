@@ -1,8 +1,9 @@
 package haja.Project.api;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import haja.Project.domain.*;
 import haja.Project.service.*;
-import haja.Project.repository.*;
 import haja.Project.api.dto.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +36,7 @@ class TasknoticeApiControllerTest {
     private MockMvc mvc;
     @BeforeEach
     void setUp() {
+        // Standalone MVC covers binding and JSON; service tests cover the admin guard.
         mvc = MockMvcBuilders.standaloneSetup(controller).build();
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken("7", "unused"));
     }
@@ -46,12 +48,11 @@ class TasknoticeApiControllerTest {
     }
     private static final String BODY = "{\"title\": \"title\", \"explanation\": \"body\", \"target\": \"BE\", \"deadline\": \"2026-10-01 12:00:00\", \"tags\": [\"existing\", \"new\"], \"link\": \"https://example.com\"}";
     private Tasknotice notice() {
-        Tasknotice n = new Tasknotice(); n.setId(9L); n.setTitle("title"); n.setExplanation("body"); n.setTarget(Part.BE);
+        Tasknotice n = new Tasknotice(); n.setId(9L); n.setLink("https://example.com"); n.setTitle("title"); n.setExplanation("body"); n.setTarget(Part.BE);
         n.setDate(LocalDateTime.of(2026, 9, 17, 12, 0)); n.setDeadline(LocalDateTime.of(2026, 10, 1, 12, 0)); return n;
     }
-    @ParameterizedTest
-    @ValueSource(strings = {"POST", "PUT"})
-    void adminCreatesOrUpdatesWithExistingAndNewTags(String method) throws Exception {
+    @Test
+    void adminUpdatesWithExistingAndNewTags() throws Exception {
         authorize(Authority.ROLE_ADMIN);
         Tasknotice existing = notice();
         when(tasknoticeService.findOne(9L)).thenReturn(existing);
@@ -59,12 +60,9 @@ class TasknoticeApiControllerTest {
         when(tagService.findByName("existing")).thenReturn(tag);
         when(tasknoticeService.save(any())).thenReturn(9L);
         Tasknotice_Tag old = new Tasknotice_Tag(); old.setId(4L);
-        if (method.equals("PUT")) {
-            when(associationService.findByTasknoticeId(9L)).thenReturn(List.of(old));
-            when(associationService.findOne(4L)).thenReturn(old);
-        }
-        LocalDateTime before = LocalDateTime.now();
-        mvc.perform((method.equals("POST") ? post("/tasknotice") : put("/tasknotice/9"))
+        when(associationService.findByTasknoticeId(9L)).thenReturn(List.of(old));
+        when(associationService.findOne(4L)).thenReturn(old);
+        mvc.perform(put("/tasknotice/9")
                         .contentType(MediaType.APPLICATION_JSON).content(BODY))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(9));
         ArgumentCaptor<Tasknotice_Tag> links = ArgumentCaptor.forClass(Tasknotice_Tag.class);
@@ -77,18 +75,14 @@ class TasknoticeApiControllerTest {
         verify(tasknoticeService).save(saved.capture());
         assertThat(saved.getValue()).extracting("title", "explanation", "target", "deadline", "link")
                 .containsExactly("title", "body", Part.BE, existing.getDeadline(), "https://example.com");
-        if (method.equals("PUT")) verify(associationService).delete(old);
-        else {
-            assertThat(saved.getValue().getDate()).isBetween(before, LocalDateTime.now());
-            assertThat(saved.getValue().getMember().getId()).isEqualTo(7L);
-        }
+        verify(associationService).delete(old);
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"POST", "PUT", "DELETE"})
+    @ValueSource(strings = {"PUT", "DELETE"})
     void ordinaryMemberCannotMutateNotices(String method) throws Exception {
         authorize(Authority.ROLE_USER);
-        var request = method.equals("POST") ? post("/tasknotice") : method.equals("PUT") ? put("/tasknotice/9") : delete("/tasknotice/9");
+        var request = method.equals("PUT") ? put("/tasknotice/9") : delete("/tasknotice/9");
         mvc.perform(request.contentType(MediaType.APPLICATION_JSON).content(BODY)).andExpect(status().isOk());
         verifyNoInteractions(tasknoticeService, tagService, associationService, taskService);
     }
@@ -136,18 +130,71 @@ class TasknoticeApiControllerTest {
     }
 
     @Test
-    void createsWithoutTags() throws Exception {
-        authorize(Authority.ROLE_ADMIN);
-        when(tasknoticeService.save(any())).thenReturn(9L);
-        mvc.perform(post("/tasknotice").contentType(MediaType.APPLICATION_JSON).content("{}"))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(9));
-        verifyNoInteractions(tagService, associationService);
-    }
-    @Test
     void rejectsInvalidTargetBeforeServiceCalls() throws Exception {
         mvc.perform(post("/tasknotice").contentType(MediaType.APPLICATION_JSON).content(BODY.replace("BE", "invalid")))
                 .andExpect(status().isBadRequest());
         verifyNoInteractions(tasknoticeService, memberService, tagService, associationService);
+    }
+
+    @Test
+    void createsTasknoticeThroughServiceAndReturnsTasknoticeInfo() throws Exception {
+        Tasknotice created = notice();
+        created.setMember(Member.builder().id(7L).name("admin").build());
+        when(tasknoticeService.create(eq(7L), any(TasknoticeRequestDto.Create.class))).thenReturn(created);
+
+        mvc.perform(post("/tasknotice").contentType(MediaType.APPLICATION_JSON).content(BODY))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.data.id").value(9))
+                .andExpect(jsonPath("$.data.member.id").value(7))
+                .andExpect(jsonPath("$.data.title").value("title"))
+                .andExpect(jsonPath("$.data.explanation").value("body"))
+                .andExpect(jsonPath("$.data.link").value("https://example.com"))
+                .andExpect(jsonPath("$.data.target").value("BE"))
+                .andExpect(jsonPath("$.data.date").value("2026-09-17 12:00:00"))
+                .andExpect(jsonPath("$.data.deadline").value("2026-10-01 12:00:00"))
+                .andExpect(jsonPath("$.id").doesNotExist());
+
+        ArgumentCaptor<TasknoticeRequestDto.Create> request = ArgumentCaptor.forClass(TasknoticeRequestDto.Create.class);
+        verify(tasknoticeService).create(eq(7L), request.capture());
+        assertThat(request.getValue()).extracting("title", "explanation", "target", "deadline", "tags", "link")
+                .containsExactly("title", "body", Part.BE, created.getDeadline(), List.of("existing", "new"), "https://example.com");
+        verifyNoMoreInteractions(tasknoticeService);
+        verifyNoInteractions(memberService, tagService, associationService, taskService);
+    }
+
+    @Test
+    void createsWithoutTags() throws Exception {
+        when(tasknoticeService.create(eq(7L), any(TasknoticeRequestDto.Create.class))).thenReturn(notice());
+
+        mvc.perform(post("/tasknotice").contentType(MediaType.APPLICATION_JSON)
+                        .content(BODY.replace("[\"existing\", \"new\"]", "[]")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.id").value(9));
+
+        ArgumentCaptor<TasknoticeRequestDto.Create> request = ArgumentCaptor.forClass(TasknoticeRequestDto.Create.class);
+        verify(tasknoticeService).create(eq(7L), request.capture());
+        assertThat(request.getValue().getTags()).isEmpty();
+        verifyNoInteractions(memberService, tagService, associationService, taskService);
+    }
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void forwardsNullTagsWhenOmittedOrExplicitlyNull(boolean explicitNull) throws Exception {
+        ObjectNode body = (ObjectNode) new ObjectMapper().readTree(BODY);
+        if (explicitNull) {
+            body.putNull("tags");
+        } else {
+            body.remove("tags");
+        }
+        when(tasknoticeService.create(eq(7L), any(TasknoticeRequestDto.Create.class))).thenReturn(notice());
+
+        mvc.perform(post("/tasknotice").contentType(MediaType.APPLICATION_JSON).content(body.toString()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.id").value(9));
+
+        ArgumentCaptor<TasknoticeRequestDto.Create> request = ArgumentCaptor.forClass(TasknoticeRequestDto.Create.class);
+        verify(tasknoticeService).create(eq(7L), request.capture());
+        assertThat(request.getValue().getTags()).isNull();
+        assertThat(request.getValue().getTitle()).isEqualTo("title");
+        verifyNoInteractions(memberService, tagService, associationService, taskService);
     }
 
 }
